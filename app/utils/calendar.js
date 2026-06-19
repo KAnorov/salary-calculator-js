@@ -179,6 +179,40 @@ function countTotalVacationWorkdays(vacationStart, vacationEnd) {
   return count;
 }
 
+function countTotalVacationCalendarDays(vacationStart, vacationEnd) {
+  if (!vacationStart || !vacationEnd) {
+    return 0;
+  }
+
+  let count = 0;
+  const cursor = new Date(vacationStart);
+
+  while (cursor.getTime() <= vacationEnd.getTime()) {
+    count++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return count;
+}
+
+function countVacationCalendarDaysInMonth(year, month, vacations) {
+  const daysInMonth = getDaysInMonth(new Date(year, month, 1));
+  if (!vacations || vacations.length === 0) {
+    return 0;
+  }
+
+  let count = 0;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    if (isDateInAnyVacation(date, vacations)) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
 function calculateAverageDailyRate(salary) {
   // Формула по ТК РФ: СДЗ = зарплата за 12 мес / (12 × 29,3)
   // Упрощённо: оклад / 29,3 (где 29,3 — среднее число календарных дней в месяце)
@@ -285,8 +319,8 @@ function getMonthlyData(salary, taxRate, year, options = {}) {
   const vacationPayoutsByMonth = {};
   if (hasVacations) {
     for (const v of normalizedVacations) {
-      const totalWorkdays = countTotalVacationWorkdays(v.start, v.end);
-      const label = `${formatVacationRangeLabel(v.start, v.end)}, ${totalWorkdays} раб. дн.`;
+      const totalCalendarDays = countTotalVacationCalendarDays(v.start, v.end);
+      const label = `${formatVacationRangeLabel(v.start, v.end)}, ${totalCalendarDays} кал. дн.`;
       const startYear = v.start.getFullYear();
       const startMonth = v.start.getMonth();
       const endYear = v.end.getFullYear();
@@ -302,9 +336,9 @@ function getMonthlyData(salary, taxRate, year, options = {}) {
           if (!vacationPayoutsByMonth[mm]) {
             vacationPayoutsByMonth[mm] = { total: 0, labels: [] };
           }
-          // Считаем рабочие дни отпуска в этом месяце
-          const monthWorkdays = countVacationWorkdaysInMonth(my, mm, normalizedVacations);
-          const monthPayout = v.vacationPayoutPerDay * monthWorkdays;
+          // Считаем календарные дни отпуска в этом месяце
+          const monthCalendarDays = countVacationCalendarDaysInMonth(my, mm, normalizedVacations);
+          const monthPayout = v.vacationPayoutPerDay * monthCalendarDays;
           vacationPayoutsByMonth[mm].total += monthPayout;
           vacationPayoutsByMonth[mm].labels.push({ label, payout: monthPayout });
         }
@@ -378,6 +412,8 @@ export {
   getWorkingDaysInMonthByYear,
   getWorkingDaysInPeriodByYear,
   countTotalVacationWorkdays,
+  countTotalVacationCalendarDays,
+  countVacationCalendarDaysInMonth,
   calculateAverageDailyRate,
   normalizeVacationRange,
   getAvailableYears,

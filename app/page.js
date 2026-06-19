@@ -7,6 +7,7 @@ import {
   hasHolidayCalendar,
   normalizeVacationRange,
   countTotalVacationWorkdays,
+  countTotalVacationCalendarDays,
   calculateAverageDailyRate,
 } from './utils/calendar';
 import styles from './page.module.css';
@@ -36,22 +37,22 @@ export default function SalaryCalculator() {
   }, [parsedSalary, taxRate, year, calcMode, vacations]);
 
   const vacationSummary = useMemo(() => {
-    let totalWorkdays = 0;
+    let totalCalendarDays = 0;
     let totalPayout = 0;
     for (const v of vacations) {
       const { start, end } = normalizeVacationRange(v.vacationStart, v.vacationEnd);
       if (start && end) {
-        const workdays = countTotalVacationWorkdays(start, end);
+        const calendarDays = countTotalVacationCalendarDays(start, end);
         const payoutPerDay = calculateAverageDailyRate(parsedSalary);
-        totalWorkdays += workdays;
-        totalPayout += payoutPerDay * workdays;
+        totalCalendarDays += calendarDays;
+        totalPayout += payoutPerDay * calendarDays;
       }
     }
-    if (totalWorkdays === 0) {
+    if (totalCalendarDays === 0) {
       return null;
     }
-    return { workdays: totalWorkdays, totalPayout };
-  }, [vacations, parsedSalary, year]);
+    return { calendarDays: totalCalendarDays, totalPayout };
+  }, [vacations, parsedSalary]);
 
   const addVacation = () => {
     setVacations((prev) => [...prev, createEmptyVacation()]);
@@ -224,7 +225,7 @@ export default function SalaryCalculator() {
 
               {vacationSummary && (
                 <p className={styles.vacationHint}>
-                  Итого отпускных дней: {vacationSummary.workdays} · Сумма: {formatCurrency(vacationSummary.totalPayout)} руб.
+                  Итого отпускных дней: {vacationSummary.calendarDays} · Сумма: {formatCurrency(vacationSummary.totalPayout)} руб.
                 </p>
               )}
 
