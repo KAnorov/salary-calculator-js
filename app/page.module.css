@@ -1,0 +1,218 @@
+.page {
+  min-height: 100vh;
+  background: #f5f6f8;
+  color: #111827;
+}
+
+.container {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+}
+
+.header {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.controls {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 16px;
+  background: #fff;
+  width: 100%;
+}
+
+.input:focus {
+  outline: 2px solid #dbeafe;
+  border-color: #93c5fd;
+}
+
+.inputWrap {
+  position: relative;
+}
+
+.inputWrap .input {
+  padding-right: 34px;
+}
+
+.clearButton {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: #e5e7eb;
+  color: #374151;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  background: #d1d5db;
+}
+
+.modeSection {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modeToggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.modeOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.vacationControls {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vacationDates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.vacationHint {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.vacationBadge {
+  color: #2563eb;
+}
+
+.vacationPayoutRow {
+  background: #eff6ff;
+  margin: 0 -12px 8px;
+  padding: 8px 12px;
+  border-top: 0;
+}
+
+.tableSection {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.monthCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.monthTitle {
+  margin: 0;
+  font-size: 18px;
+  text-transform: capitalize;
+}
+
+.monthMeta {
+  margin: 4px 0 10px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.paymentRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.paymentLabel {
+  color: #374151;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.paymentDays {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.amount {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 22px;
+  }
+
+  .paymentRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

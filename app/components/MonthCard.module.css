@@ -1,0 +1,136 @@
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.cardHeader {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.monthName {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.workingDays {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.workingDaysLabel {
+  font-weight: 500;
+}
+
+.workingDaysValue {
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.cardBody {
+  padding: 20px;
+}
+
+.paymentRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.paymentRow:last-child {
+  margin-bottom: 0;
+}
+
+.paymentInfo {
+  flex: 1;
+}
+
+.paymentDate {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.paymentPeriod {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.paymentAmount {
+  text-align: right;
+  min-width: 180px;
+}
+
+.grossAmount {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+  margin-bottom: 4px;
+}
+
+.netAmount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.netLabel {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.netValue {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #059669;
+  background: #f0fdf4;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+  margin: 16px 0;
+}
+
+@media (max-width: 768px) {
+  .paymentRow {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .paymentAmount {
+    text-align: left;
+    width: 100%;
+  }
+  
+  .netValue {
+    font-size: 1rem;
+  }
+}
