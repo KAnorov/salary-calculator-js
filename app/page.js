@@ -7,45 +7,65 @@ import {
   hasHolidayCalendar,
   normalizeVacationRange,
   countTotalVacationWorkdays,
+  calculateAverageDailyRate,
 } from './utils/calendar';
 import styles from './page.module.css';
 
 const CURRENT_YEAR = new Date().getFullYear();
+
+function createEmptyVacation() {
+  return { id: Date.now() + Math.random(), vacationStart: '', vacationEnd: '' };
+}
 
 export default function SalaryCalculator() {
   const [salaryInput, setSalaryInput] = useState('100000');
   const [taxRate, setTaxRate] = useState(13);
   const [year, setYear] = useState(CURRENT_YEAR);
   const [calcMode, setCalcMode] = useState('standard');
-  const [vacationStart, setVacationStart] = useState('');
-  const [vacationEnd, setVacationEnd] = useState('');
-  const [vacationPayoutPerDayInput, setVacationPayoutPerDayInput] = useState('');
+  const [vacations, setVacations] = useState([]);
 
   const salary = Number(salaryInput);
   const parsedSalary = Number.isFinite(salary) ? salary : 0;
-  const vacationPayoutPerDay = Number(vacationPayoutPerDayInput);
-  const parsedVacationPayoutPerDay = Number.isFinite(vacationPayoutPerDay) ? vacationPayoutPerDay : 0;
   const availableYears = useMemo(() => getAvailableYears(), []);
 
   const monthsData = useMemo(() => {
     return getMonthlyData(parsedSalary, taxRate, year, {
       mode: calcMode,
-      vacationStart,
-      vacationEnd,
-      vacationPayoutPerDay: parsedVacationPayoutPerDay,
+      vacations,
     });
-  }, [parsedSalary, taxRate, year, calcMode, vacationStart, vacationEnd, parsedVacationPayoutPerDay]);
+  }, [parsedSalary, taxRate, year, calcMode, vacations]);
 
   const vacationSummary = useMemo(() => {
-    const { start, end } = normalizeVacationRange(vacationStart, vacationEnd);
-    if (!start || !end) {
+    let totalWorkdays = 0;
+    let totalPayout = 0;
+    for (const v of vacations) {
+      const { start, end } = normalizeVacationRange(v.vacationStart, v.vacationEnd);
+      if (start && end) {
+        const workdays = countTotalVacationWorkdays(start, end);
+        const payoutPerDay = calculateAverageDailyRate(parsedSalary);
+        totalWorkdays += workdays;
+        totalPayout += payoutPerDay * workdays;
+      }
+    }
+    if (totalWorkdays === 0) {
       return null;
     }
+    return { workdays: totalWorkdays, totalPayout };
+  }, [vacations, parsedSalary, year]);
 
-    return {
-      workdays: countTotalVacationWorkdays(start, end),
-    };
-  }, [vacationStart, vacationEnd]);
+  const addVacation = () => {
+    setVacations((prev) => [...prev, createEmptyVacation()]);
+  };
+
+  const removeVacation = (id) => {
+    setVacations((prev) => prev.filter((v) => v.id !== id));
+  };
+
+  const updateVacation = (id, field, value) => {
+    setVacations((prev) =>
+      prev.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
+    );
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -158,54 +178,59 @@ export default function SalaryCalculator() {
 
           {isVacationMode && (
             <div className={styles.vacationControls}>
-              <div className={styles.vacationDates}>
-                <div className={styles.field}>
-                  <label htmlFor="vacationStart" className={styles.label}>Отпуск с</label>
-                  <input
-                    id="vacationStart"
-                    type="date"
-                    className={styles.input}
-                    value={vacationStart}
-                    onChange={(e) => setVacationStart(e.target.value)}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="vacationEnd" className={styles.label}>Отпуск по</label>
-                  <input
-                    id="vacationEnd"
-                    type="date"
-                    className={styles.input}
-                    value={vacationEnd}
-                    onChange={(e) => setVacationEnd(e.target.value)}
-                  />
-                </div>
+              <div className={styles.vacationListHeader}>
+                <span className={styles.label}>Отпуска</span>
+                <button type="button" className={styles.addVacationButton} onClick={addVacation}>
+                  + Добавить
+                </button>
               </div>
 
-              <div className={styles.field}>
-                <label htmlFor="vacationPayoutPerDay" className={styles.label}>
-                  Сумма за 1 отпускной день (на руки), руб.
-                </label>
-                <input
-                  id="vacationPayoutPerDay"
-                  type="number"
-                  className={styles.input}
-                  value={vacationPayoutPerDayInput}
-                  onChange={(e) => setVacationPayoutPerDayInput(e.target.value)}
-                  min="0"
-                  step="100"
-                  placeholder="0"
-                />
-              </div>
-
-              {vacationSummary && parsedVacationPayoutPerDay > 0 && (
-                <p className={styles.vacationHint}>
-                  Итого отпускные: {formatCurrency(parsedVacationPayoutPerDay * vacationSummary.workdays)} руб.
-                  ({parsedVacationPayoutPerDay.toLocaleString('ru-RU')} × {vacationSummary.workdays} раб. дн.)
-                </p>
+              {vacations.length === 0 && (
+                <p className={styles.vacationHint}>Добавьте отпуск, чтобы учесть уменьшение рабочих дней</p>
               )}
+
+              {vacations.map((v) => (
+                <div className={styles.vacationItem} key={v.id}>
+                  <div className={styles.vacationDates}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>С</label>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        value={v.vacationStart}
+                        onChange={(e) => updateVacation(v.id, 'vacationStart', e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>По</label>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        value={v.vacationEnd}
+                        onChange={(e) => updateVacation(v.id, 'vacationEnd', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.removeVacationButton}
+                    onClick={() => removeVacation(v.id)}
+                    aria-label="Удалить отпуск"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
 
               {vacationSummary && (
                 <p className={styles.vacationHint}>
+                  Итого отпускных дней: {vacationSummary.workdays} · Сумма: {formatCurrency(vacationSummary.totalPayout)} руб.
+                </p>
+              )}
+
+              {vacations.some((v) => v.vacationStart && v.vacationEnd) && (
+                <p className={styles.vacationHint}>
+                  Стоимость дня отпуска рассчитывается автоматически по средней оплате за аналогичный период прошлого года.
                   Рабочие дни отпуска исключаются из зарплаты. Если отпуск после 15-го числа,
                   уменьшение будет на выплате 5-го числа следующего месяца.
                 </p>
@@ -218,7 +243,12 @@ export default function SalaryCalculator() {
           <div className={styles.monthGrid}>
             {monthsData.map((monthData) => (
               <article className={styles.monthCard} key={monthData.month}>
-                <h2 className={styles.monthTitle}>{monthData.monthName}</h2>
+                <div className={styles.monthCardHeader}>
+                  <h2 className={styles.monthTitle}>{monthData.monthName}</h2>
+                  <span className={styles.totalPayout}>
+                    {formatCurrency(monthData.totalPayout)} руб.
+                  </span>
+                </div>
                 <p className={styles.monthMeta}>
                   Рабочих дней в месяце: {monthData.workingDays}
                   {isVacationMode && monthData.vacationDays > 0 && (
@@ -228,13 +258,16 @@ export default function SalaryCalculator() {
                   )}
                 </p>
 
-                {monthData.vacationPayout != null && (
+                {monthData.vacationLabels && monthData.vacationLabels.length > 0 && (
                   <div className={`${styles.paymentRow} ${styles.vacationPayoutRow}`}>
                     <span className={styles.paymentLabel}>
-                      Отпускные ({monthData.vacationPeriodLabel})
-                    </span>
-                    <span className={styles.amount}>
-                      {formatCurrency(monthData.vacationPayout)} руб.
+                      Отпускные:
+                      {monthData.vacationLabels.map((l, i) => (
+                        <span key={i}>
+                          {i > 0 && ';\u00A0'}
+                          <span>{l.label}: {formatCurrency(l.payout)} руб.</span>
+                        </span>
+                      ))}
                     </span>
                   </div>
                 )}

@@ -87,6 +87,17 @@ function isDateInVacation(date, vacationStart, vacationEnd) {
   return time >= vacationStart.getTime() && time <= vacationEnd.getTime();
 }
 
+function isDateInAnyVacation(date, vacations) {
+  if (!vacations || vacations.length === 0) {
+    return false;
+  }
+
+  const time = date.getTime();
+  return vacations.some(
+    (v) => v.start && v.end && time >= v.start.getTime() && time <= v.end.getTime(),
+  );
+}
+
 function isWorkday(date) {
   const dayOfWeek = getDay(date);
 
@@ -128,8 +139,8 @@ function getWorkingDaysInPeriodByYear(year, month, startDay, endDay) {
   return workingDays;
 }
 
-function countVacationWorkdaysInPeriod(year, month, startDay, endDay, vacationStart, vacationEnd) {
-  if (!vacationStart || !vacationEnd) {
+function countVacationWorkdaysInPeriod(year, month, startDay, endDay, vacations) {
+  if (!vacations || vacations.length === 0) {
     return 0;
   }
 
@@ -137,7 +148,7 @@ function countVacationWorkdaysInPeriod(year, month, startDay, endDay, vacationSt
 
   for (let day = startDay; day <= endDay; day++) {
     const date = new Date(year, month, day);
-    if (isWorkday(date) && isDateInVacation(date, vacationStart, vacationEnd)) {
+    if (isWorkday(date) && isDateInAnyVacation(date, vacations)) {
       count++;
     }
   }
@@ -145,9 +156,9 @@ function countVacationWorkdaysInPeriod(year, month, startDay, endDay, vacationSt
   return count;
 }
 
-function countVacationWorkdaysInMonth(year, month, vacationStart, vacationEnd) {
+function countVacationWorkdaysInMonth(year, month, vacations) {
   const daysInMonth = getDaysInMonth(new Date(year, month, 1));
-  return countVacationWorkdaysInPeriod(year, month, 1, daysInMonth, vacationStart, vacationEnd);
+  return countVacationWorkdaysInPeriod(year, month, 1, daysInMonth, vacations);
 }
 
 function countTotalVacationWorkdays(vacationStart, vacationEnd) {
@@ -168,6 +179,13 @@ function countTotalVacationWorkdays(vacationStart, vacationEnd) {
   return count;
 }
 
+function calculateAverageDailyRate(salary) {
+  // Формула по ТК РФ: СДЗ = зарплата за 12 мес / (12 × 29,3)
+  // Упрощённо: оклад / 29,3 (где 29,3 — среднее число календарных дней в месяце)
+  const avgCalendarDaysPerMonth = 29.3;
+  return salary / avgCalendarDaysPerMonth;
+}
+
 function calculatePeriodNet(workingDaysInPeriod, vacationDaysInPeriod, dailyRate, taxMultiplier, useVacationMode) {
   const workedDays = useVacationMode
     ? Math.max(0, workingDaysInPeriod - vacationDaysInPeriod)
@@ -179,8 +197,7 @@ function calculatePeriodNet(workingDaysInPeriod, vacationDaysInPeriod, dailyRate
 function calculateMonthParts(year, month, salary, taxRate, vacationOptions = {}) {
   const {
     useVacationMode = false,
-    vacationStart = null,
-    vacationEnd = null,
+    vacations = [],
   } = vacationOptions;
   const daysInMonth = getDaysInMonth(new Date(year, month, 1));
   const workingDays = getWorkingDaysInMonthByYear(year, month);
@@ -189,10 +206,10 @@ function calculateMonthParts(year, month, salary, taxRate, vacationOptions = {})
   const dailyRate = workingDays > 0 ? salary / workingDays : 0;
   const taxMultiplier = 1 - taxRate / 100;
   const period1Vacation = useVacationMode
-    ? countVacationWorkdaysInPeriod(year, month, 1, 15, vacationStart, vacationEnd)
+    ? countVacationWorkdaysInPeriod(year, month, 1, 15, vacations)
     : 0;
   const period2Vacation = useVacationMode
-    ? countVacationWorkdaysInPeriod(year, month, 16, daysInMonth, vacationStart, vacationEnd)
+    ? countVacationWorkdaysInPeriod(year, month, 16, daysInMonth, vacations)
     : 0;
   const vacationDaysInMonth = period1Vacation + period2Vacation;
 
@@ -237,59 +254,81 @@ function getMonthlyData(salary, taxRate, year, options = {}) {
   const normalizedYear = Number.isFinite(year) ? year : new Date().getFullYear();
   const {
     mode = 'standard',
-    vacationStart: vacationStartInput = '',
-    vacationEnd: vacationEndInput = '',
-    vacationPayoutPerDay = 0,
+    vacations = [],
   } = options;
   const useVacationMode = mode === 'vacation';
-  const { start: vacationStart, end: vacationEnd } = normalizeVacationRange(
-    vacationStartInput,
-    vacationEndInput,
-  );
-  const hasVacationRange = Boolean(vacationStart && vacationEnd);
-  const normalizedPayoutPerDay = Number.isFinite(vacationPayoutPerDay)
-    ? Math.max(vacationPayoutPerDay, 0)
-    : 0;
-  const totalVacationWorkdays = hasVacationRange
-    ? countTotalVacationWorkdays(vacationStart, vacationEnd)
-    : 0;
-  const totalVacationPayout = normalizedPayoutPerDay * totalVacationWorkdays;
-  const vacationPeriodLabel = hasVacationRange
-    ? `${formatVacationRangeLabel(vacationStart, vacationEnd)}, ${totalVacationWorkdays} раб. дн.`
-    : '';
-  const vacationPayoutMonth = hasVacationRange ? vacationStart.getMonth() + 1 : null;
-  const vacationPayoutYear = hasVacationRange ? vacationStart.getFullYear() : null;
+  const normalizedVacations = useVacationMode
+    ? vacations
+        .map((v) => {
+          const { start, end } = normalizeVacationRange(v.vacationStart, v.vacationEnd);
+          if (!start || !end) return null;
+          // Автоматический расчёт средней стоимости дня отпуска по ТК РФ:
+          // СДЗ = оклад / 29,3 (29,3 — среднее число календарных дней в месяце)
+          const payoutPerDay = calculateAverageDailyRate(normalizedSalary);
+          return { start, end, vacationPayoutPerDay: payoutPerDay };
+        })
+        .filter((v) => v && v.start && v.end && v.vacationPayoutPerDay > 0)
+    : [];
+  const hasVacations = normalizedVacations.length > 0;
   const monthBase = [];
 
   for (let month = 0; month < 12; month++) {
     monthBase.push(
       calculateMonthParts(normalizedYear, month, normalizedSalary, normalizedTaxRate, {
-        useVacationMode: useVacationMode && hasVacationRange,
-        vacationStart,
-        vacationEnd,
+        useVacationMode: hasVacations,
+        vacations: normalizedVacations,
       }),
     );
+  }
+
+  // Рассчитываем отпускные для каждого отпуска
+  const vacationPayoutsByMonth = {};
+  if (hasVacations) {
+    for (const v of normalizedVacations) {
+      const totalWorkdays = countTotalVacationWorkdays(v.start, v.end);
+      const label = `${formatVacationRangeLabel(v.start, v.end)}, ${totalWorkdays} раб. дн.`;
+      const startYear = v.start.getFullYear();
+      const startMonth = v.start.getMonth();
+      const endYear = v.end.getFullYear();
+      const endMonth = v.end.getMonth();
+
+      // Распределяем отпускные по месяцам, в которых были дни отпуска
+      const firstMonth = startYear * 12 + startMonth;
+      const lastMonth = endYear * 12 + endMonth;
+      for (let m = firstMonth; m <= lastMonth; m++) {
+        const my = Math.floor(m / 12);
+        const mm = m % 12;
+        if (my === normalizedYear) {
+          if (!vacationPayoutsByMonth[mm]) {
+            vacationPayoutsByMonth[mm] = { total: 0, labels: [] };
+          }
+          // Считаем рабочие дни отпуска в этом месяце
+          const monthWorkdays = countVacationWorkdaysInMonth(my, mm, normalizedVacations);
+          const monthPayout = v.vacationPayoutPerDay * monthWorkdays;
+          vacationPayoutsByMonth[mm].total += monthPayout;
+          vacationPayoutsByMonth[mm].labels.push({ label, payout: monthPayout });
+        }
+      }
+    }
   }
 
   return monthBase.map((currentMonth, index) => {
     const previousMonth =
       index === 0
         ? calculateMonthParts(normalizedYear - 1, 11, normalizedSalary, normalizedTaxRate, {
-            useVacationMode: useVacationMode && hasVacationRange,
-            vacationStart,
-            vacationEnd,
+            useVacationMode: hasVacations,
+            vacations: normalizedVacations,
           })
         : monthBase[index - 1];
 
-    const showVacationPayout =
-      useVacationMode
-      && hasVacationRange
-      && totalVacationPayout > 0
-      && vacationPayoutYear === normalizedYear
-      && vacationPayoutMonth === currentMonth.month + 1;
+    const monthIdx = currentMonth.month;
+    const vacationPayoutInfo = vacationPayoutsByMonth[monthIdx] || { total: 0, labels: [] };
+    const vacationPayout = vacationPayoutInfo.total > 0 ? vacationPayoutInfo.total : null;
+    const vacationLabels = vacationPayoutInfo.labels.length > 0 ? vacationPayoutInfo.labels : null;
 
     const paymentOn5PaidDays = previousMonth.period2Days - previousMonth.period2Vacation;
     const paymentOn20PaidDays = currentMonth.period1Days - currentMonth.period1Vacation;
+    const totalPayout = currentMonth.period1Net + previousMonth.period2Net + (vacationPayout || 0);
 
     return {
       month: currentMonth.month + 1,
@@ -307,9 +346,9 @@ function getMonthlyData(salary, taxRate, year, options = {}) {
       paymentOn20TotalDays: currentMonth.period1Days,
       paymentOn20VacationDays: currentMonth.period1Vacation,
       previousMonthName: previousMonth.monthName,
-      vacationPayout: showVacationPayout ? totalVacationPayout : null,
-      vacationPayoutPerDay: showVacationPayout ? normalizedPayoutPerDay : null,
-      vacationPeriodLabel: showVacationPayout ? vacationPeriodLabel : null,
+      vacationPayout,
+      vacationLabels,
+      totalPayout,
     };
   });
 }
@@ -339,6 +378,7 @@ export {
   getWorkingDaysInMonthByYear,
   getWorkingDaysInPeriodByYear,
   countTotalVacationWorkdays,
+  calculateAverageDailyRate,
   normalizeVacationRange,
   getAvailableYears,
   hasHolidayCalendar,
